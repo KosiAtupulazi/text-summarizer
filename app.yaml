@@ -1,0 +1,23 @@
+# app.yaml — Google App Engine Standard (Python 3.12)
+# Documentation: https://cloud.google.com/appengine/docs/standard/reference/app-yaml
+
+runtime: python312
+
+# Entrypoint: gunicorn serves the Flask app object named `app` inside main.py
+entrypoint: gunicorn -b :$PORT main:app
+
+# Environment variables available to your app at runtime.
+# IMPORTANT: Do NOT commit your real API key here.
+# Instead, use Google Cloud Secret Manager (recommended for production) or
+# set this value in a local app.yaml that is listed in .gitignore.
+env_variables:
+  ANTHROPIC_API_KEY: "YOUR_API_KEY_HERE"
+
+# Automatic scaling — keeps costs near-zero for a learning project
+automatic_scaling:
+  min_instances: 0         # Scale to zero when idle
+  max_instances: 2         # Cap to avoid surprise bills
+  target_cpu_utilization: 0.65
+
+# Instance class F1 is the smallest (free tier eligible)
+instance_class: F1

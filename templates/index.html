@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Text Summarizer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Georgia", serif;
+      background: #f5f2eb;
+      color: #1a1a1a;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    header h1 { font-size: 2rem; letter-spacing: -0.5px; }
+    header p  { color: #666; margin-top: 0.4rem; font-size: 0.95rem; }
+
+    .card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1.5rem;
+      max-width: 720px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .tab-btn {
+      padding: 0.45rem 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f0ede6;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .tab-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.4rem; }
+
+    textarea, input[type="url"] {
+      width: 100%;
+      padding: 0.65rem 0.8rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: #fafafa;
+      resize: vertical;
+    }
+    textarea { min-height: 140px; }
+    textarea:focus, input[type="url"]:focus {
+      outline: 2px solid #1a1a1a;
+      outline-offset: 1px;
+    }
+
+    button[type="submit"] {
+      margin-top: 1rem;
+      padding: 0.6rem 1.4rem;
+      background: #1a1a1a;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button[type="submit"]:hover { opacity: 0.8; }
+    button[type="submit"]:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #result-card { display: none; }
+    #result-card h2 { font-size: 1rem; margin-bottom: 0.75rem; color: #555; }
+    #summary-text {
+      line-height: 1.7;
+      font-size: 0.97rem;
+      white-space: pre-wrap;
+    }
+    #error-msg {
+      color: #c0392b;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+      display: none;
+    }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Text Summarizer</h1>
+  <p>Powered by Claude &amp; Google App Engine</p>
+</header>
+
+<div class="card">
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="text">Plain Text</button>
+    <button class="tab-btn"        data-tab="url">URL</button>
+  </div>
+
+  <!-- Plain Text Tab -->
+  <div class="tab-panel active" id="panel-text">
+    <label for="input-text">Paste text to summarize</label>
+    <textarea id="input-text" placeholder="Paste any article, essay, or block of text here..."></textarea>
+    <button type="submit" id="btn-text">Summarize</button>
+    <p id="error-text" class="error-msg" style="color:#c0392b;font-size:.9rem;margin-top:.5rem;display:none;"></p>
+  </div>
+
+  <!-- URL Tab -->
+  <div class="tab-panel" id="panel-url">
+    <label for="input-url">Enter a URL to scrape and summarize</label>
+    <input type="url" id="input-url" placeholder="https://example.com/article" />
+    <button type="submit" id="btn-url">Summarize URL</button>
+    <p id="error-url" class="error-msg" style="color:#c0392b;font-size:.9rem;margin-top:.5rem;display:none;"></p>
+  </div>
+</div>
+
+<!-- Result -->
+<div class="card" id="result-card">
+  <h2>Summary</h2>
+  <p id="summary-text"></p>
+</div>
+
+<script>
+  // ── Tab switching ──────────────────────────────────────────────
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+      document.getElementById("result-card").style.display = "none";
+    });
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────
+  function setLoading(btn, loading) {
+    if (loading) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Summarizing…';
+    } else {
+      btn.disabled = false;
+      btn.textContent = btn.id === "btn-url" ? "Summarize URL" : "Summarize";
+    }
+  }
+
+  function showError(el, msg) {
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+  function clearError(el) { el.style.display = "none"; el.textContent = ""; }
+
+  function showResult(summary) {
+    const card = document.getElementById("result-card");
+    document.getElementById("summary-text").textContent = summary;
+    card.style.display = "block";
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ── Plain text submit ──────────────────────────────────────────
+  document.getElementById("btn-text").addEventListener("click", async () => {
+    const text  = document.getElementById("input-text").value.trim();
+    const errEl = document.getElementById("error-text");
+    clearError(errEl);
+
+    if (!text) { showError(errEl, "Please paste some text first."); return; }
+
+    const btn = document.getElementById("btn-text");
+    setLoading(btn, true);
+    try {
+      const res  = await fetch("/summarize/text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (!res.ok) { showError(errEl, data.error || "Something went wrong."); return; }
+      showResult(data.summary);
+    } catch (e) {
+      showError(errEl, "Network error — is the server running?");
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  // ── URL submit ─────────────────────────────────────────────────
+  document.getElementById("btn-url").addEventListener("click", async () => {
+    const url   = document.getElementById("input-url").value.trim();
+    const errEl = document.getElementById("error-url");
+    clearError(errEl);
+
+    if (!url) { showError(errEl, "Please enter a URL."); return; }
+
+    const btn = document.getElementById("btn-url");
+    setLoading(btn, true);
+    try {
+      const res  = await fetch("/summarize/url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+      if (!res.ok) { showError(errEl, data.error || "Something went wrong."); return; }
+      showResult(data.summary);
+    } catch (e) {
+      showError(errEl, "Network error — is the server running?");
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+</script>
+
+</body>
+</html>
