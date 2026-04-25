@@ -12,7 +12,6 @@ entrypoint: gunicorn -b :$PORT main:app
 # set this value in a local app.yaml that is listed in .gitignore.
 env_variables:
   ANTHROPIC_API_KEY: "YOUR_API_KEY_HERE"
-
 # Automatic scaling — keeps costs near-zero for a learning project
 automatic_scaling:
   min_instances: 0         # Scale to zero when idle
