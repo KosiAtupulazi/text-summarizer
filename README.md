@@ -17,7 +17,11 @@ text-summarizer/
 └── templates/
     └── index.html       # Simple browser UI
 ```
+## Additional Improvements
 
+- Enhanced UI styling for summary display
+- Improved input validation and error handling
+- Optimized user experience for better interaction
 ---
 
 ## Local Setup
