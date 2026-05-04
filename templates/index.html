@@ -191,7 +191,10 @@
     const errEl = document.getElementById("error-text");
     clearError(errEl);
 
-    if (!text) { showError(errEl, "Please paste some text first."); return; }
+    if (!text || text.length < 20) {
+      showError(errEl, "Please enter at least 20 characters of text.");
+      return;
+    } 
 
     const btn = document.getElementById("btn-text");
     setLoading(btn, true);
