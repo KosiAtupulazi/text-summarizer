@@ -220,7 +220,10 @@
     const errEl = document.getElementById("error-url");
     clearError(errEl);
 
-    if (!url) { showError(errEl, "Please enter a URL."); return; }
+    if (!url || !url.startsWith("http")) {
+      showError(errEl, "Please enter a valid URL (http/https).");
+      return;
+    }
 
     const btn = document.getElementById("btn-url");
     setLoading(btn, true);
